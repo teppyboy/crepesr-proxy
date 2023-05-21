@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "crepesr-proxy"
+version = "0.1.0"
+description = "Proxy for automatically redirect traffic to CrepeSR"
+authors = ["tretrauit <tretrauit@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "crepesr_proxy"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+mitmproxy = "^9.0.1"
+requests = "^2.30.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
