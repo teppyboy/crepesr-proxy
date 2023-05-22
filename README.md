@@ -2,6 +2,10 @@
 
 This is a proxy server for CrepeSR. It is used to forward requests to the CrepeSR server.
 
+## Why?
+
+Fuck Fiddle Classic, we Linux gang.
+
 ## Usage
 
 ### From source
