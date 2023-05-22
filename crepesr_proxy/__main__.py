@@ -14,8 +14,21 @@ logger.addHandler(handler)
 
 
 def main():
-    logger.info("Creating new mitmproxy instance...")
     proxy_manager = ProxyManager()
+    for arg in sys.argv:
+        if arg.startswith("--ip="):
+            proxy_manager.proxy_host = arg.split("=")[1]
+        elif arg.startswith("--port="):
+            proxy_manager.set_proxy_port(arg.split("=")[1])
+        elif arg.startswith("--address="):
+            proxy_manager.proxy_host = arg.split("=")[1].split(":")[0]
+            try:
+                port = arg.split("=")[1].split(":")[1]
+            except IndexError:
+                pass
+            else:
+                proxy_manager.set_proxy_port(port=port)
+    logger.info("Creating new mitmproxy instance...")
     logging.getLogger("mitmproxy").setLevel(logging.ERROR)
     logger.info("Starting proxy...")
     proxy_manager.start_proxy()

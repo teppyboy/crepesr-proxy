@@ -227,24 +227,16 @@ class ProxyManager:
                 raise NotImplementedError("MacOS is not supported yet.")
 
     def _set_system_proxy_nt(self):
-        # Doesn't work but okay.
-        args = ["netsh", "winhttp", "set", "proxy", 
-                f'{self.proxy_host}:{self.proxy_port}']
         try:
-            if not utils.is_root():
-                args.insert(0, self._get_su())
-            subprocess.check_call(args=args)
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            raise SetSystemProxyError("Failed to set system proxy: {}".format(e))
+            utils.set_system_proxy(self.proxy_host, self.proxy_port)
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+            raise SetSystemProxyError("Failed to set system proxy") from e
 
     def _unset_system_proxy_nt(self):
-        args = ["netsh", "winhttp", "reset", "proxy"]
         try:
-            if not utils.is_root():
-                args.insert(0, self._get_su())
-            subprocess.check_call(args=args)
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            raise UnsetSystemProxyError("Failed to set system proxy: {}".format(e))
+            utils.unset_system_proxy()
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+            raise UnsetSystemProxyError("Failed to unset system proxy") from e
 
     def set_system_proxy(self):
         match platform.system():
