@@ -212,7 +212,7 @@ class ProxyManager:
             else:
                 subprocess.check_call([self._get_su(), "certutil.exe", "-addstore", 
                                        "root", file.name])
-        except subprocess.CalledProcessError as e:
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
             raise CertificateInstallError("Failed to install certificate: {}".format(e))
         finally:
             Path(file.name).unlink(missing_ok=True)
