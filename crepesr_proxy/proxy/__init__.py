@@ -13,7 +13,7 @@ from contextlib import closing
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 from crepesr_proxy import utils
-from crepesr_proxy.proxy.exceptions import CertificateInstallError
+from crepesr_proxy.proxy.exceptions import CertificateInstallError, SetSystemProxyError, UnsetSystemProxyError
 
 
 class Sniffer:
@@ -227,27 +227,40 @@ class ProxyManager:
                 raise NotImplementedError("MacOS is not supported yet.")
 
     def _set_system_proxy_nt(self):
-        subprocess.check_call(["netsh", "winhttp", "set", "proxy", 
-                        f'proxy-server="http={self.proxy_host}:{self.proxy_port};https={self.proxy_host}:{self.proxy_port}"',
-                        'bypass-list="localhost"'])
+        # Doesn't work but okay.
+        args = ["netsh", "winhttp", "set", "proxy", 
+                f'{self.proxy_host}:{self.proxy_port}']
+        try:
+            if not utils.is_root():
+                args.insert(0, self._get_su())
+            subprocess.check_call(args=args)
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            raise SetSystemProxyError("Failed to set system proxy: {}".format(e))
 
     def _unset_system_proxy_nt(self):
-        subprocess.check_call(["netsh", "winhttp", "reset", "proxy"])
+        args = ["netsh", "winhttp", "reset", "proxy"]
+        try:
+            if not utils.is_root():
+                args.insert(0, self._get_su())
+            subprocess.check_call(args=args)
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            raise UnsetSystemProxyError("Failed to set system proxy: {}".format(e))
 
     def set_system_proxy(self):
         match platform.system():
             case "Linux":
-                raise NotImplementedError("Linux is not supported yet.")
+                raise SetSystemProxyError("Linux is not supported yet.")
             case "Windows":
                 self._set_system_proxy_nt()
             case "Darwin":
-                raise NotImplementedError("MacOS is not supported yet.")
+                raise SetSystemProxyError("MacOS is not supported yet.")
             
     def unset_system_proxy(self):
         match platform.system():
             case "Linux":
-                raise NotImplementedError("Linux is not supported yet.")
+                raise SetSystemProxyError("Linux is not supported yet.")
             case "Windows":
                 self._unset_system_proxy_nt()
             case "Darwin":
-                raise NotImplementedError("MacOS is not supported yet.")
+                raise SetSystemProxyError("MacOS is not supported yet.")
+            

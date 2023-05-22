@@ -1,5 +1,5 @@
 from .proxy import ProxyManager
-from .proxy.exceptions import CertificateInstallError
+from .proxy.exceptions import CertificateInstallError, SetSystemProxyError, UnsetSystemProxyError
 import time
 import sys
 import logging
@@ -28,6 +28,13 @@ def main():
             logger.error(e)
     else:
         logger.info("Certificate already installed.")
+    sys_proxy_set = True
+    try:
+        logger.info("Setting system proxy...")
+        proxy_manager.set_system_proxy()
+    except SetSystemProxyError as e:
+        logger.error(e)
+        sys_proxy_set = False
     logger.info("Proxy started at http://{}:{}".format(proxy_manager.proxy_host, 
                                                        proxy_manager.proxy_port))
     logger.info("Press Ctrl+C to stop proxy.")
@@ -37,6 +44,12 @@ def main():
     except KeyboardInterrupt:
         print("a")
         pass
+    if sys_proxy_set:
+        try:
+            logger.info("Unsetting system proxy...")
+            proxy_manager.unset_system_proxy()
+        except UnsetSystemProxyError as e:
+            logger.error(e)
     logger.info("Stopping proxy...")
     proxy_manager.stop_proxy()
     logger.info("Proxy stopped.")
