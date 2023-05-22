@@ -12,6 +12,8 @@ from mitmproxy.http import HTTPFlow
 from contextlib import closing
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
+from crepesr_proxy import utils
+from crepesr_proxy.proxy.exceptions import CertificateInstallError
 
 
 class Sniffer:
@@ -42,8 +44,8 @@ class ProxyManager:
         Manage mitmproxy to create necessary proxy for the app to work.
         """
         self._mitm = None
-        self._loop = self._create_loop()
-        self.proxy_port = 8080
+        self._loop, self._thread = self._create_loop()
+        self.proxy_port = 13168
         self.proxy_host = "127.0.0.1"
         self._mitm_options = self._create_mitmproxy_options()
         self._logger = logging.getLogger("crepesr-proxy.proxy")
@@ -61,7 +63,7 @@ class ProxyManager:
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
             s.bind(('', 0))
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            return s.getsockname()[1]
+        return s.getsockname()[1]
 
     @staticmethod
     def _create_loop():
@@ -72,8 +74,11 @@ class ProxyManager:
             A new event loop that is started and run forever.
         """
         loop = asyncio.new_event_loop()
-        threading.Thread(target=loop.run_forever).start()
-        return loop
+        # Daemonized Thread to not block the program.
+        thread = threading.Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+        asyncio.set_event_loop(loop)
+        return loop, thread
 
     def _create_mitmproxy_options(self):
         """
@@ -140,7 +145,7 @@ class ProxyManager:
             return
         self._mitm.shutdown()
         self._loop.stop()
-        self._loop = self._create_loop()
+        self._loop, self._thread = self._create_loop()
         del self._mitm
 
     def _get_system_cert_path(self):
@@ -148,7 +153,7 @@ class ProxyManager:
             case "Linux":
                 return "/etc/ssl/certs/ca-certificates.crt"
             case "Windows":
-                return "C:\ProgramData\Microsoft\Crypto\RSA\MachineKeys"
+                return True
             case "Darwin":
                 raise NotImplementedError("MacOS is not supported yet.")
 
@@ -159,7 +164,7 @@ class ProxyManager:
         }
         try:
             requests.get("https://google.com", proxies=proxies, 
-                         verify=self._get_system_cert_path())
+                        verify=self._get_system_cert_path())
         except requests.exceptions.SSLError:
             return False
         return True
@@ -181,25 +186,68 @@ class ProxyManager:
         file.write(rsp.content)
         file.flush()
         # This method works in Arch Linux, not sure about other distros.
-        subprocess.run([self._get_su(), "trust", "anchor", "--store", file.name])
-        subprocess.run([self._get_su(), "update-ca-trust"])
+        try:
+            if utils.is_root():
+                subprocess.check_call(["trust", "anchor", "--store", file.name])
+                subprocess.check_call(["update-ca-trust"])
+            else:
+                subprocess.check_call([self._get_su(), "trust", "anchor", "--store", 
+                                       file.name])
+                subprocess.check_call([self._get_su(), "update-ca-trust"])
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            raise CertificateInstallError("Failed to install certificate: {}".format(e))
 
-    def _install_certificate_windows(self):
-        rsp = requests.get("http://mitm.it/cert/p12", proxies = {
+    def _install_certificate_nt(self):
+        rsp = requests.get("http://mitm.it/cert/cer", proxies = {
             "http": "http://{}:{}".format(self.proxy_host, self.proxy_port),
             "https": "http://{}:{}".format(self.proxy_host, self.proxy_port)
         })
         with NamedTemporaryFile(suffix=".p12", delete=False) as file:
             file.write(rsp.content)
             file.flush()
-        subprocess.run(["certutil.exe", "-addstore", "root", file.name])
-        Path(file.name).unlink()
+        self._logger.debug("Certificate file: {}".format(file.name))
+        try:
+            if utils.is_root():
+                subprocess.check_call(["certutil.exe", "-addstore", "root", file.name])
+            else:
+                subprocess.check_call([self._get_su(), "certutil.exe", "-addstore", 
+                                       "root", file.name])
+        except subprocess.CalledProcessError as e:
+            raise CertificateInstallError("Failed to install certificate: {}".format(e))
+        finally:
+            Path(file.name).unlink(missing_ok=True)
         
     def install_certificate(self):
         match platform.system():
             case "Linux":
                 self._install_certificate_linux()
             case "Windows":
-                self._install_certificate_windows()
+                self._install_certificate_nt()
+            case "Darwin":
+                raise NotImplementedError("MacOS is not supported yet.")
+
+    def _set_system_proxy_nt(self):
+        subprocess.check_call(["netsh", "winhttp", "set", "proxy", 
+                        f'proxy-server="http={self.proxy_host}:{self.proxy_port};https={self.proxy_host}:{self.proxy_port}"',
+                        'bypass-list="localhost"'])
+
+    def _unset_system_proxy_nt(self):
+        subprocess.check_call(["netsh", "winhttp", "reset", "proxy"])
+
+    def set_system_proxy(self):
+        match platform.system():
+            case "Linux":
+                raise NotImplementedError("Linux is not supported yet.")
+            case "Windows":
+                self._set_system_proxy_nt()
+            case "Darwin":
+                raise NotImplementedError("MacOS is not supported yet.")
+            
+    def unset_system_proxy(self):
+        match platform.system():
+            case "Linux":
+                raise NotImplementedError("Linux is not supported yet.")
+            case "Windows":
+                self._unset_system_proxy_nt()
             case "Darwin":
                 raise NotImplementedError("MacOS is not supported yet.")
