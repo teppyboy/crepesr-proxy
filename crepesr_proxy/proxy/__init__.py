@@ -265,8 +265,8 @@ class ProxyManager:
                 case "Windows":
                     utils.unset_system_proxy()
                 case "Darwin":
-                    raise SetSystemProxyError("MacOS is not supported yet.")
+                    raise UnsetSystemProxyError("MacOS is not supported yet.")
         except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
-            raise SetSystemProxyError("Failed to set system proxy") from e
-        except SetSystemProxyError:
+            raise UnsetSystemProxyError("Failed to set system proxy") from e
+        except UnsetSystemProxyError:
             raise
