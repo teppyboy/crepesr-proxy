@@ -39,9 +39,8 @@ class Sniffer:
 
     def request(self, flow: HTTPFlow):
         host = flow.request.pretty_host
-        self._logger.debug("Request: {}".format(host))
         if any([host.endswith(x) for x in self.BLACKLIST]):
-            self._logger.info("Request redirected: {}".format(host))
+            self._logger.info("Redirected: {}".format(host))
             flow.request.host = self.SERVER
 
         if "overseauspider.yuanshen.com" in flow.request.host:
