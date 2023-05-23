@@ -18,6 +18,7 @@ logger.addHandler(handler)
 
 
 def main():
+    sys_proxy_set = True
     proxy_manager = ProxyManager()
     for arg in sys.argv:
         if arg.startswith("--ip="):
@@ -32,6 +33,8 @@ def main():
                 pass
             else:
                 proxy_manager.set_proxy_port(port=port)
+        elif arg.startswith("--no-set-system-proxy"):
+            sys_proxy_set = False
     logger.info("Creating new mitmproxy instance...")
     logging.getLogger("mitmproxy").setLevel(logging.ERROR)
     logger.info("Starting proxy...")
@@ -45,13 +48,13 @@ def main():
             logger.error(e)
     else:
         logger.info("Certificate already installed.")
-    sys_proxy_set = True
-    try:
-        logger.info("Setting system proxy...")
-        proxy_manager.set_system_proxy()
-    except SetSystemProxyError as e:
-        logger.error(e)
-        sys_proxy_set = False
+    if sys_proxy_set:
+        try:
+            logger.info("Setting system proxy...")
+            proxy_manager.set_system_proxy()
+        except SetSystemProxyError as e:
+            logger.error(e)
+            sys_proxy_set = False
     logger.info(
         "Proxy started at http://{}:{}".format(
             proxy_manager.proxy_host, proxy_manager.proxy_port
