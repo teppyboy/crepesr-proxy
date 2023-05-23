@@ -38,6 +38,18 @@ def main():
             sys_proxy_set = False
         elif arg.startswith("--ys") or arg.startswith("--genshin"):
             proxy_manager.proxy_type = ProxyType.YS
+        elif arg.startswith("--help"):
+            print("""Usage: crepesr-proxy [OPTIONS]
+Options:
+    --proxy-ip=IP         Set the proxy IP address.
+    --proxy-port=PORT     Set the proxy port.
+    --proxy-server=SERVER Set the proxy server (IP:PORT).
+    --no-set-system-proxy Do not set the system proxy.
+    --ys                  Set the proxy mode to Genshin.
+    --genshin             Alias to --ys.
+    --help                Show this message and exit.""")
+            return
+
     logger.info("Creating new mitmproxy instance...")
     logging.getLogger("mitmproxy").setLevel(logging.ERROR)
     logger.info("Starting proxy...")
@@ -58,6 +70,9 @@ def main():
         except SetSystemProxyError as e:
             logger.error(e)
             sys_proxy_set = False
+    server_address, server_port = proxy_manager.get_server_address()
+    logger.info("Server address: {}".format(server_address))
+    logger.info("Server port (optional): {}".format(server_port))
     logger.info(
         "Proxy started at http://{}:{}".format(
             proxy_manager.proxy_host, proxy_manager.proxy_port

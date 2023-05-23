@@ -366,4 +366,12 @@ class Proxy:
             if port != 0:
                 YSSniffer.PORT = port
 
+    def get_server_address(self):
+        """
+        Gets the server address for the proxy to redirect to.
+        """
+        if self._proxy_type == ProxyType.SR:
+            return SRSniffer.HOST, SRSniffer.PORT
+        elif self._proxy_type == ProxyType.YS:
+            return YSSniffer.HOST, YSSniffer.PORT
         
