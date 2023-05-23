@@ -1,5 +1,9 @@
 from .proxy import ProxyManager
-from .proxy.exceptions import CertificateInstallError, SetSystemProxyError, UnsetSystemProxyError
+from .proxy.exceptions import (
+    CertificateInstallError,
+    SetSystemProxyError,
+    UnsetSystemProxyError,
+)
 import time
 import sys
 import logging
@@ -8,7 +12,7 @@ logger = logging.getLogger("crepesr-proxy")
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
 handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s')
+formatter = logging.Formatter("[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -48,8 +52,11 @@ def main():
     except SetSystemProxyError as e:
         logger.error(e)
         sys_proxy_set = False
-    logger.info("Proxy started at http://{}:{}".format(proxy_manager.proxy_host, 
-                                                       proxy_manager.proxy_port))
+    logger.info(
+        "Proxy started at http://{}:{}".format(
+            proxy_manager.proxy_host, proxy_manager.proxy_port
+        )
+    )
     logger.info("Press Ctrl+C to stop proxy.")
     try:
         while True:
@@ -66,5 +73,6 @@ def main():
     logger.info("Stopping proxy...")
     proxy_manager.stop_proxy()
     logger.info("Proxy stopped.")
+
 
 main()

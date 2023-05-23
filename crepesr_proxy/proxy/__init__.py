@@ -12,15 +12,27 @@ from contextlib import closing
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 from crepesr_proxy import utils
-from crepesr_proxy.proxy.exceptions import CertificateInstallError, SetSystemProxyError, UnsetSystemProxyError
+from crepesr_proxy.proxy.exceptions import (
+    CertificateInstallError,
+    SetSystemProxyError,
+    UnsetSystemProxyError,
+)
 
 
 class Sniffer:
     # Taken from the Google Docs file.
-    BLACKLIST = [".yuanshen.com", ".hoyoverse.com", ".mihoyo.com", "starrails.com", 
-                 ".kurogame.com", "zenlesszonezero.com", "api.g3.proletariat.com", 
-                 "west.honkaiimpact3.com"]
+    BLACKLIST = [
+        ".yuanshen.com",
+        ".hoyoverse.com",
+        ".mihoyo.com",
+        "starrails.com",
+        ".kurogame.com",
+        "zenlesszonezero.com",
+        "api.g3.proletariat.com",
+        "west.honkaiimpact3.com",
+    ]
     SERVER = "sr.crepe.moe"
+
     def __init__(self) -> None:
         self._logger = logging.getLogger("crepesr-proxy.proxy.sniffer")
         self._logger.info("Sniffer started.")
@@ -60,7 +72,7 @@ class ProxyManager:
             An integer representing the free port.
         """
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-            s.bind(('', 0))
+            s.bind(("", 0))
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
 
@@ -68,7 +80,7 @@ class ProxyManager:
     def _create_loop():
         """
         Creates a new event loop.
-        
+
         Returns:
             A new event loop that is started and run forever.
         """
@@ -87,7 +99,7 @@ class ProxyManager:
             listen_host=self.proxy_host,
             listen_port=self.proxy_port,
             ssl_insecure=True,
-            upstream_cert=False
+            upstream_cert=False,
         )
         return options
 
@@ -111,7 +123,7 @@ class ProxyManager:
         """
         Creates a new proxy.
 
-        It is optional to use this function unless you want to set mitmproxy port 
+        It is optional to use this function unless you want to set mitmproxy port
         before starting proxy.
 
         Returns:
@@ -159,20 +171,26 @@ class ProxyManager:
     def is_certificate_installed(self) -> bool:
         proxies = {
             "http": "http://{}:{}".format(self.proxy_host, self.proxy_port),
-            "https": "http://{}:{}".format(self.proxy_host, self.proxy_port)
+            "https": "http://{}:{}".format(self.proxy_host, self.proxy_port),
         }
         try:
-            requests.get("https://google.com", proxies=proxies, 
-                        verify=self._get_system_cert_path())
+            requests.get(
+                "https://google.com",
+                proxies=proxies,
+                verify=self._get_system_cert_path(),
+            )
         except requests.exceptions.SSLError:
             return False
         return True
 
     def _install_certificate_linux(self):
-        rsp = requests.get("http://mitm.it/cert/pem", proxies = {
-            "http": "http://{}:{}".format(self.proxy_host, self.proxy_port),
-            "https": "http://{}:{}".format(self.proxy_host, self.proxy_port)
-        })
+        rsp = requests.get(
+            "http://mitm.it/cert/pem",
+            proxies={
+                "http": "http://{}:{}".format(self.proxy_host, self.proxy_port),
+                "https": "http://{}:{}".format(self.proxy_host, self.proxy_port),
+            },
+        )
         file = NamedTemporaryFile(suffix=".pem")
         file.write(rsp.content)
         file.flush()
@@ -193,10 +211,13 @@ class ProxyManager:
             raise CertificateInstallError("Failed to install certificate: {}".format(e))
 
     def _install_certificate_nt(self):
-        rsp = requests.get("http://mitm.it/cert/cer", proxies = {
-            "http": "http://{}:{}".format(self.proxy_host, self.proxy_port),
-            "https": "http://{}:{}".format(self.proxy_host, self.proxy_port)
-        })
+        rsp = requests.get(
+            "http://mitm.it/cert/cer",
+            proxies={
+                "http": "http://{}:{}".format(self.proxy_host, self.proxy_port),
+                "https": "http://{}:{}".format(self.proxy_host, self.proxy_port),
+            },
+        )
         with NamedTemporaryFile(suffix=".p12", delete=False) as file:
             file.write(rsp.content)
             file.flush()
@@ -205,13 +226,14 @@ class ProxyManager:
             if utils.is_root():
                 subprocess.check_call(["certutil.exe", "-addstore", "root", file.name])
             else:
-                subprocess.check_call([utils.get_su(), "certutil.exe", "-addstore", 
-                                       "root", file.name])
+                subprocess.check_call(
+                    [utils.get_su(), "certutil.exe", "-addstore", "root", file.name]
+                )
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
             raise CertificateInstallError("Failed to install certificate: {}".format(e))
         finally:
             Path(file.name).unlink(missing_ok=True)
-        
+
     def install_certificate(self):
         match platform.system():
             case "Linux":
@@ -234,7 +256,7 @@ class ProxyManager:
             raise SetSystemProxyError("Failed to set system proxy") from e
         except SetSystemProxyError:
             raise
-            
+
     def unset_system_proxy(self):
         try:
             match platform.system():
@@ -248,4 +270,3 @@ class ProxyManager:
             raise SetSystemProxyError("Failed to set system proxy") from e
         except SetSystemProxyError:
             raise
-            
