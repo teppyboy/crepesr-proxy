@@ -1,4 +1,4 @@
-from .proxy import ProxyManager
+from .proxy import Proxy, ProxyType
 from .proxy.exceptions import (
     CertificateInstallError,
     SetSystemProxyError,
@@ -19,13 +19,14 @@ logger.addHandler(handler)
 
 def main():
     sys_proxy_set = True
-    proxy_manager = ProxyManager()
+    proxy_manager = Proxy()
+    # I'm too lazy to use argparse
     for arg in sys.argv:
-        if arg.startswith("--ip="):
+        if arg.startswith("--proxy-ip="):
             proxy_manager.proxy_host = arg.split("=")[1]
-        elif arg.startswith("--port="):
+        elif arg.startswith("--proxy-port="):
             proxy_manager.set_proxy_port(arg.split("=")[1])
-        elif arg.startswith("--address="):
+        elif arg.startswith("--proxy-server="):
             proxy_manager.proxy_host = arg.split("=")[1].split(":")[0]
             try:
                 port = arg.split("=")[1].split(":")[1]
@@ -35,6 +36,8 @@ def main():
                 proxy_manager.set_proxy_port(port=port)
         elif arg.startswith("--no-set-system-proxy"):
             sys_proxy_set = False
+        elif arg.startswith("--ys") or arg.startswith("--genshin"):
+            proxy_manager.proxy_type = ProxyType.YS
     logger.info("Creating new mitmproxy instance...")
     logging.getLogger("mitmproxy").setLevel(logging.ERROR)
     logger.info("Starting proxy...")

@@ -1,15 +1,15 @@
 import asyncio
 import logging
 import threading
-import socket
 import requests
 import platform
 import subprocess
 import os
+from ast import literal_eval
+from enum import Enum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from mitmproxy.http import HTTPFlow
-from contextlib import closing
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 from crepesr_proxy import utils
@@ -20,7 +20,63 @@ from crepesr_proxy.proxy.exceptions import (
 )
 
 
-class Sniffer:
+class YSSniffer:
+    # Taken from Grasscutter Github.
+    LIST_DOMAINS = [
+        "api-os-takumi.mihoyo.com",
+        "hk4e-api-os-static.mihoyo.com",
+        "hk4e-sdk-os.mihoyo.com",
+        "dispatchosglobal.yuanshen.com",
+        "osusadispatch.yuanshen.com",
+        "account.mihoyo.com",
+        "log-upload-os.mihoyo.com",
+        "dispatchcntest.yuanshen.com",
+        "devlog-upload.mihoyo.com",
+        "webstatic.mihoyo.com",
+        "log-upload.mihoyo.com",
+        "hk4e-sdk.mihoyo.com",
+        "api-beta-sdk.mihoyo.com",
+        "api-beta-sdk-os.mihoyo.com",
+        "cnbeta01dispatch.yuanshen.com",
+        "dispatchcnglobal.yuanshen.com",
+        "cnbeta02dispatch.yuanshen.com",
+        "sdk-os-static.mihoyo.com",
+        "webstatic-sea.mihoyo.com",
+        "webstatic-sea.hoyoverse.com",
+        "hk4e-sdk-os-static.hoyoverse.com",
+        "sdk-os-static.hoyoverse.com",
+        "api-account-os.hoyoverse.com",
+        "hk4e-sdk-os.hoyoverse.com",
+        "overseauspider.yuanshen.com",
+        "gameapi-account.mihoyo.com",
+        "minor-api.mihoyo.com",
+        "public-data-api.mihoyo.com",
+        "uspider.yuanshen.com",
+        "sdk-static.mihoyo.com",
+        "abtest-api-data-sg.hoyoverse.com",
+        "log-upload-os.hoyoverse.com"
+    ]
+    HOST = os.getenv("SERVER_ADDRESS", "login.yuuki.me")
+    USE_SSL = os.getenv("USE_SSL", "true").lower() == "true"
+    PORT = int(os.getenv("SERVER_PORT", "443" if USE_SSL else "80"))
+
+    def __init__(self) -> None:
+        self._logger = logging.getLogger("crepesr-proxy.proxy.ys.sniffer")
+        self._logger.info("YSSniffer started.")
+
+    def request(self, flow: HTTPFlow):
+        host = flow.request.pretty_host
+        if host in self.LIST_DOMAINS:
+            self._logger.info("Redirected: {}".format(host))
+            if self.USE_SSL:
+                flow.request.scheme = "https"
+            else:
+                flow.request.scheme = "http"
+            flow.request.host = self.HOST
+            flow.request.port = self.PORT
+
+
+class SRSniffer:
     # Taken from the Google Docs file.
     BLACKLIST = [
         ".yuanshen.com",
@@ -32,49 +88,56 @@ class Sniffer:
         "api.g3.proletariat.com",
         "west.honkaiimpact3.com",
     ]
-    SERVER = os.getenv("SERVER_ADDRESS", "sr.crepe.moe")
+    HOST = os.getenv("SERVER_ADDRESS", "sr.crepe.moe")
+    USE_SSL = literal_eval(f"\"{os.getenv('USE_SSL', 'None').title()}\"")
+    PORT = literal_eval(os.getenv("SERVER_PORT", "None"))
 
     def __init__(self) -> None:
-        self._logger = logging.getLogger("crepesr-proxy.proxy.sniffer")
-        self._logger.info("Sniffer started.")
+        self._logger = logging.getLogger("crepesr-proxy.proxy.sr.sniffer")
+        self._logger.info("SRSniffer started.")
 
     def request(self, flow: HTTPFlow):
         host = flow.request.pretty_host
-        if any([host.endswith(x) for x in self.BLACKLIST]):
-            self._logger.info("Redirected: {}".format(host))
-            flow.request.host = self.SERVER
-
         if "overseauspider.yuanshen.com" in flow.request.host:
             self._logger.info("Logging server blocked: {}".format(host))
             flow.kill()
+            return
+        if any([host.endswith(x) for x in self.BLACKLIST]):
+            self._logger.info("Redirected: {}".format(host))
+            flow.request.host = self.HOST
+            if self.USE_SSL is not None:
+                if self.USE_SSL:
+                    flow.request.scheme = "https"
+                else:
+                    flow.request.scheme = "http"
+            if isinstance(self.PORT, int):
+                flow.request.port = self.PORT
 
 
-class ProxyManager:
-    def __init__(self):
+class ProxyType(Enum):
+    SR = 0
+    YS = 1
+
+
+class Proxy:
+    def __init__(self, proxy_type: ProxyType = ProxyType.SR):
         """
         Manage mitmproxy to create necessary proxy for the app to work.
         """
         self._mitm = None
         self._loop, self._thread = self._create_loop()
+        self._proxy_type = proxy_type
         self.proxy_port = 13168
         self.proxy_host = "127.0.0.1"
         self._mitm_options = self._create_mitmproxy_options()
-        self._logger = logging.getLogger("crepesr-proxy.proxy")
+        self._set_logger()
 
-    @staticmethod
-    def _get_free_port() -> int:
-        """
-        Gets a free port to use with mitmproxy
-
-        Source: https://stackoverflow.com/a/45690594/13671777
-
-        Returns:
-            An integer representing the free port.
-        """
-        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-            s.bind(("", 0))
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
+    def _set_logger(self):
+        match self._proxy_type:
+            case ProxyType.SR:
+                self._logger = logging.getLogger("crepesr-proxy.proxy.sr")
+            case ProxyType.YS:
+                self._logger = logging.getLogger("crepesr-proxy.proxy.ys")
 
     @staticmethod
     def _create_loop():
@@ -90,6 +153,18 @@ class ProxyManager:
         thread.start()
         asyncio.set_event_loop(loop)
         return loop, thread
+
+    @property
+    def proxy_type(self):
+        return self._proxy_type
+
+    @proxy_type.setter
+    def proxy_type(self, value: ProxyType):
+        if self._mitm is not None:
+            raise RuntimeError("Cannot change proxy type after mitmproxy is created. "
+                               + "You need to stop the proxy first.")
+        self._proxy_type = value
+        self._set_logger()
 
     def _create_mitmproxy_options(self):
         """
@@ -109,8 +184,12 @@ class ProxyManager:
             self._logger.warning("mitmproxy is already created")
             return
         self._mitm = DumpMaster(options=self._mitm_options)
-        self._mitm.addons.add(Sniffer())
-        self._logger.debug("mitmproxy created")
+        match self._proxy_type:
+            case ProxyType.SR:
+                self._mitm.addons.add(SRSniffer())
+            case ProxyType.YS:
+                self._mitm.addons.add(YSSniffer())
+        self._logger.debug("mitmproxy instance created")
 
     async def _run_mitmdump(self, port):
         if not self._mitm:
@@ -270,3 +349,21 @@ class ProxyManager:
             raise UnsetSystemProxyError("Failed to set system proxy") from e
         except UnsetSystemProxyError:
             raise
+
+    def set_server_address(self, address, port: int = 0):
+        """
+        Sets the server address for the proxy to redirect to.
+        """
+        if self._mitm is not None:
+            raise RuntimeError("Cannot change proxy address after mitmproxy is created."
+                               + " You need to stop the proxy first.")
+        if self._proxy_type == ProxyType.SR:
+            SRSniffer.HOST = address
+            if port != 0:
+                SRSniffer.PORT = port
+        elif self._proxy_type == ProxyType.YS:
+            YSSniffer.HOST = address
+            if port != 0:
+                YSSniffer.PORT = port
+
+        
