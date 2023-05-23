@@ -10,6 +10,7 @@ Fuck Fiddle Classic, we Linux gang.
 
 + Automatic mitmproxy configuration & certificate installation.
 + Automatic set/unset system proxy.
++ Connect to your own CrepeSR instance by setting `SERVER_ADDRESS` env
 + Works on Windows & Linux.
 
 ## Usage

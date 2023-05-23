@@ -5,6 +5,7 @@ import socket
 import requests
 import platform
 import subprocess
+import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from mitmproxy.http import HTTPFlow
@@ -31,7 +32,7 @@ class Sniffer:
         "api.g3.proletariat.com",
         "west.honkaiimpact3.com",
     ]
-    SERVER = "sr.crepe.moe"
+    SERVER = os.getenv("SERVER_ADDRESS", "sr.crepe.moe")
 
     def __init__(self) -> None:
         self._logger = logging.getLogger("crepesr-proxy.proxy.sniffer")
