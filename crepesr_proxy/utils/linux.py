@@ -16,7 +16,7 @@ def get_su():
         return None
 
 def set_system_proxy(host: str, port: int):
-    if host not in ["127.0.0.1", "localhost"]:
+    if host not in ["127.0.0.1", "localhost", "0.0.0.0"]:
         raise NotImplementedError("Only localhost is supported for now.")
     args = ["iptables", "-t", "nat", "-A", "OUTPUT", "-p", "tcp", "-m", "owner", "!", 
             "--uid-owner", "root", "-m", "multiport", "--dports", "80,443", "-j", 
@@ -30,7 +30,7 @@ def set_system_proxy(host: str, port: int):
     subprocess.check_call(args=args)
 
 def unset_system_proxy(host: str, port: int):
-    if host not in ["127.0.0.1", "localhost"]:
+    if host not in ["127.0.0.1", "localhost", "0.0.0.0"]:
         raise NotImplementedError("Only localhost is supported for now.")
     args = ["iptables", "-t", "nat", "-D", "OUTPUT", "-p", "tcp", "-m", "owner", "!", 
             "--uid-owner", "root", "-m", "multiport", "--dports", "80,443", "-j", 
