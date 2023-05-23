@@ -6,6 +6,12 @@ This is a proxy server for CrepeSR. It is used to forward requests to the CrepeS
 
 Fuck Fiddle Classic, we Linux gang.
 
+## Features
+
++ Automatic mitmproxy configuration & certificate installation.
++ Automatic set/unset system proxy.
++ Works on Windows & Linux.
+
 ## Usage
 
 ### From source
