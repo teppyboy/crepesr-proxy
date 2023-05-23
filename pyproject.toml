@@ -10,7 +10,7 @@ packages = [{include = "crepesr_proxy"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 mitmproxy = "^9.0.1"
-requests = "^2.30.0"
+requests = "^2.31.0"
 pip-system-certs = "^4.0"
 
 
