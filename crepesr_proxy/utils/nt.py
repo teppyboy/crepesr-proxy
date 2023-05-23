@@ -15,10 +15,11 @@ def set_system_proxy(host: str, port: int):
     args = ["netsh", "winhttp", "set", "proxy", 
             f'{host}:{port}']
     su = get_su()
-    if not is_root() and su:
-        args.insert(0, su)
-    else:
-        raise OSError("Cannot set system proxy without root privileges.")
+    if not is_root():
+        if su:
+            args.insert(0, su)
+        else:
+            raise OSError("Cannot set system proxy without root privileges.")
     subprocess.check_call(args=args)
     hkey = winreg.OpenKeyEx(
         winreg.HKEY_CURRENT_USER, 
@@ -29,13 +30,15 @@ def set_system_proxy(host: str, port: int):
     winreg.SetValueEx(hkey, "ProxyServer", 0, winreg.REG_SZ, f"{host}:{port}")
     winreg.CloseKey(hkey)
 
-def unset_system_proxy():
+def unset_system_proxy(*args, **kwargs):
+    # Compatible with Linux set_system_proxy
     args = ["netsh", "winhttp", "reset", "proxy"]
     su = get_su()
-    if not is_root() and su:
-        args.insert(0, su)
-    else:
-        raise OSError("Cannot unset system proxy without root privileges.")
+    if not is_root():
+        if su:
+            args.insert(0, su)
+        else:
+            raise OSError("Cannot unset system proxy without root privileges.")
     subprocess.check_call(args=args)
     hkey = winreg.OpenKeyEx(
         winreg.HKEY_CURRENT_USER, 

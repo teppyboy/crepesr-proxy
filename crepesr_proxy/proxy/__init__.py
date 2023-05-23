@@ -6,7 +6,6 @@ import requests
 import platform
 import subprocess
 from pathlib import Path
-from shutil import which
 from tempfile import NamedTemporaryFile
 from mitmproxy.http import HTTPFlow
 from contextlib import closing
@@ -168,14 +167,6 @@ class ProxyManager:
         except requests.exceptions.SSLError:
             return False
         return True
-    
-    def _get_su(self):
-        if which("pkexec"):
-            return "pkexec"
-        elif which("sudo"):
-            return "sudo"
-        else:
-            raise FileNotFoundError("No su wrapper found.")
 
     def _install_certificate_linux(self):
         rsp = requests.get("http://mitm.it/cert/pem", proxies = {
@@ -187,14 +178,18 @@ class ProxyManager:
         file.flush()
         # This method works in Arch Linux, not sure about other distros.
         try:
-            if utils.is_root():
-                subprocess.check_call(["trust", "anchor", "--store", file.name])
-                subprocess.check_call(["update-ca-trust"])
-            else:
-                subprocess.check_call([self._get_su(), "trust", "anchor", "--store", 
-                                       file.name])
-                subprocess.check_call([self._get_su(), "update-ca-trust"])
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            args1 = ["trust", "anchor", "--store", file.name]
+            args2 = ["update-ca-trust"]
+            su = utils.get_su()
+            if not utils.is_root():
+                if su:
+                    args1.insert(0, su)
+                    args2.insert(0, su)
+                else:
+                    raise OSError("Cannot install certificate without root privileges.")
+            subprocess.check_call(args=args1)
+            subprocess.check_call(args=args2)
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
             raise CertificateInstallError("Failed to install certificate: {}".format(e))
 
     def _install_certificate_nt(self):
@@ -210,7 +205,7 @@ class ProxyManager:
             if utils.is_root():
                 subprocess.check_call(["certutil.exe", "-addstore", "root", file.name])
             else:
-                subprocess.check_call([self._get_su(), "certutil.exe", "-addstore", 
+                subprocess.check_call([utils.get_su(), "certutil.exe", "-addstore", 
                                        "root", file.name])
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
             raise CertificateInstallError("Failed to install certificate: {}".format(e))
@@ -226,33 +221,31 @@ class ProxyManager:
             case "Darwin":
                 raise NotImplementedError("MacOS is not supported yet.")
 
-    def _set_system_proxy_nt(self):
+    def set_system_proxy(self):
         try:
-            utils.set_system_proxy(self.proxy_host, self.proxy_port)
+            match platform.system():
+                case "Linux":
+                    utils.set_system_proxy(self.proxy_host, self.proxy_port)
+                case "Windows":
+                    utils.set_system_proxy(self.proxy_host, self.proxy_port)
+                case "Darwin":
+                    raise SetSystemProxyError("MacOS is not supported yet.")
         except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
             raise SetSystemProxyError("Failed to set system proxy") from e
-
-    def _unset_system_proxy_nt(self):
-        try:
-            utils.unset_system_proxy()
-        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
-            raise UnsetSystemProxyError("Failed to unset system proxy") from e
-
-    def set_system_proxy(self):
-        match platform.system():
-            case "Linux":
-                raise SetSystemProxyError("Linux is not supported yet.")
-            case "Windows":
-                self._set_system_proxy_nt()
-            case "Darwin":
-                raise SetSystemProxyError("MacOS is not supported yet.")
+        except SetSystemProxyError:
+            raise
             
     def unset_system_proxy(self):
-        match platform.system():
-            case "Linux":
-                raise SetSystemProxyError("Linux is not supported yet.")
-            case "Windows":
-                self._unset_system_proxy_nt()
-            case "Darwin":
-                raise SetSystemProxyError("MacOS is not supported yet.")
+        try:
+            match platform.system():
+                case "Linux":
+                    utils.unset_system_proxy(self.proxy_host, self.proxy_port)
+                case "Windows":
+                    utils.unset_system_proxy()
+                case "Darwin":
+                    raise SetSystemProxyError("MacOS is not supported yet.")
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+            raise SetSystemProxyError("Failed to set system proxy") from e
+        except SetSystemProxyError:
+            raise
             
