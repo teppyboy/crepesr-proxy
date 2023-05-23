@@ -4,9 +4,9 @@ from contextlib import closing
 
 match platform.system():
     case "Windows":
-        from .nt import *  # noqa: F403
+        from crepesr_proxy.utils.nt import *  # noqa: F403
     case "Linux":
-        from .linux import *  # noqa: F403
+        from crepesr_proxy.utils.linux import *  # noqa: F403
 
 
 def get_free_port() -> int:

@@ -1,5 +1,5 @@
-from .proxy import Proxy, ProxyType
-from .proxy.exceptions import (
+from crepesr_proxy.proxy import Proxy, ProxyType
+from crepesr_proxy.proxy.exceptions import (
     CertificateInstallError,
     SetSystemProxyError,
     UnsetSystemProxyError,
