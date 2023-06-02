@@ -54,19 +54,27 @@ class YSSniffer:
         "uspider.yuanshen.com",
         "sdk-static.mihoyo.com",
         "abtest-api-data-sg.hoyoverse.com",
-        "log-upload-os.hoyoverse.com"
+        "log-upload-os.hoyoverse.com",
     ]
-    HOST = os.getenv("SERVER_ADDRESS", "login.yuuki.me")
+    HOST = os.getenv("SERVER_ADDRESS", "game.grasscutter.io")
     USE_SSL = os.getenv("USE_SSL", "true").lower() == "true"
-    PORT = int(os.getenv("SERVER_PORT", "443" if USE_SSL else "80"))
+    PORT = int(os.getenv("SERVER_PORT", "443"))
 
     def __init__(self) -> None:
         self._logger = logging.getLogger("crepesr-proxy.proxy.ys.sniffer")
-        self._logger.info("YSSniffer started.")
+        self._logger.info("Server address: {}".format(self.HOST))
+        self._logger.info("Server port: {}".format(self.PORT))
+        self._logger.info("Use SSL: {}".format(self.USE_SSL))
+        self._logger.info("YS Sniffer started.")
 
     def request(self, flow: HTTPFlow):
         host = flow.request.pretty_host
-        if host in self.LIST_DOMAINS:
+        # Cultivation design to make it work with Grasscutter OAuth.
+        if (
+            host.endswith(".mihoyo.com")
+            or host.endswith(".yuanshen.com")
+            or host.endswith(".hoyoverse.com")
+        ):
             self._logger.info("Redirected: {}".format(host))
             if self.USE_SSL:
                 flow.request.scheme = "https"
@@ -94,7 +102,9 @@ class SRSniffer:
 
     def __init__(self) -> None:
         self._logger = logging.getLogger("crepesr-proxy.proxy.sr.sniffer")
-        self._logger.info("SRSniffer started.")
+        self._logger.info("Server address: {}".format(self.HOST))
+        self._logger.info("Server port: {}".format(self.PORT))
+        self._logger.info("SR Sniffer started.")
 
     def request(self, flow: HTTPFlow):
         host = flow.request.pretty_host
@@ -161,8 +171,10 @@ class Proxy:
     @proxy_type.setter
     def proxy_type(self, value: ProxyType):
         if self._mitm is not None:
-            raise RuntimeError("Cannot change proxy type after mitmproxy is created. "
-                               + "You need to stop the proxy first.")
+            raise RuntimeError(
+                "Cannot change proxy type after mitmproxy is created. "
+                + "You need to stop the proxy first."
+            )
         self._proxy_type = value
         self._set_logger()
 
@@ -355,8 +367,10 @@ class Proxy:
         Sets the server address for the proxy to redirect to.
         """
         if self._mitm is not None:
-            raise RuntimeError("Cannot change proxy address after mitmproxy is created."
-                               + " You need to stop the proxy first.")
+            raise RuntimeError(
+                "Cannot change proxy address after mitmproxy is created."
+                + " You need to stop the proxy first."
+            )
         if self._proxy_type == ProxyType.SR:
             SRSniffer.HOST = address
             if port != 0:
@@ -366,6 +380,20 @@ class Proxy:
             if port != 0:
                 YSSniffer.PORT = port
 
+    def set_server_port(self, port):
+        """
+        Sets the server port for the proxy to redirect to.
+        """
+        if self._mitm is not None:
+            raise RuntimeError(
+                "Cannot change proxy address after mitmproxy is created."
+                + " You need to stop the proxy first."
+            )
+        if self._proxy_type == ProxyType.SR:
+            SRSniffer.PORT = port
+        elif self._proxy_type == ProxyType.YS:
+            YSSniffer.PORT = port
+
     def get_server_address(self):
         """
         Gets the server address for the proxy to redirect to.
@@ -374,4 +402,3 @@ class Proxy:
             return SRSniffer.HOST, SRSniffer.PORT
         elif self._proxy_type == ProxyType.YS:
             return YSSniffer.HOST, YSSniffer.PORT
-        

@@ -34,20 +34,34 @@ def main():
                 pass
             else:
                 proxy_manager.set_proxy_port(port=port)
+        elif arg.startswith("--server-address="):
+            proxy_manager.set_server_address(arg.split("=")[1].split(":")[0])
+            try:
+                port = arg.split("=")[1].split(":")[1]
+            except IndexError:
+                pass
+            else:
+                proxy_manager.set_server_port(port=port)
+        elif arg.startswith("--server-port="):
+            proxy_manager.set_server_port(arg.split("=")[1])
         elif arg.startswith("--no-set-system-proxy"):
             sys_proxy_set = False
         elif arg.startswith("--ys") or arg.startswith("--genshin"):
             proxy_manager.proxy_type = ProxyType.YS
         elif arg.startswith("--help"):
-            print("""Usage: crepesr-proxy [OPTIONS]
+            print(
+                """Usage: crepesr-proxy [OPTIONS]
 Options:
-    --proxy-ip=IP         Set the proxy IP address.
-    --proxy-port=PORT     Set the proxy port.
-    --proxy-server=SERVER Set the proxy server (IP:PORT).
-    --no-set-system-proxy Do not set the system proxy.
-    --ys                  Set the proxy mode to Genshin.
-    --genshin             Alias to --ys.
-    --help                Show this message and exit.""")
+    --proxy-ip=IP             Set the proxy IP address.
+    --proxy-port=PORT         Set the proxy port.
+    --proxy-server=SERVER     Set the proxy server (IP:PORT).
+    --server-address=SERVER   Set the server address (IP:PORT (optional)).
+    --server-port=PORT        Set the server port.
+    --no-set-system-proxy     Do not set the system proxy.
+    --ys                      Set the proxy mode to Genshin.
+    --genshin                 Alias to --ys.
+    --help                    Show this message and exit."""
+            )
             return
 
     logger.info("Creating new mitmproxy instance...")
