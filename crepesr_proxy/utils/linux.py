@@ -3,19 +3,14 @@ import subprocess
 from shutil import which
 
 
-def is_root():
+def is_root() -> bool:
     return os.getuid() == 0
 
 
-def get_su():
-    if which("pkexec"):
-        return "pkexec"
-    elif which("sudo"):
-        return "sudo"
-    elif which("doas"):
-        return "doas"
-    else:
-        return None
+def get_su() -> str | None:
+    for binary in ["pkexec", "sudo", "doas"]:
+        if which(binary):
+            return binary
 
 
 def set_system_proxy(host: str, port: int):
