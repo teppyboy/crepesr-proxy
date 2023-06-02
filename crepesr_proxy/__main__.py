@@ -97,7 +97,6 @@ Options:
         while True:
             time.sleep(1e6)
     except KeyboardInterrupt:
-        print("a")
         pass
     if sys_proxy_set:
         try:
