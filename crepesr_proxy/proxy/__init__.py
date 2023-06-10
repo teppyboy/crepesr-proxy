@@ -9,7 +9,7 @@ from ast import literal_eval
 from enum import Enum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from mitmproxy.http import HTTPFlow
+from mitmproxy.http import HTTPFlow, Response
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 from crepesr_proxy import utils
@@ -21,41 +21,7 @@ from crepesr_proxy.proxy.exceptions import (
 
 
 class YSSniffer:
-    # Taken from Grasscutter Github.
-    LIST_DOMAINS = [
-        "api-os-takumi.mihoyo.com",
-        "hk4e-api-os-static.mihoyo.com",
-        "hk4e-sdk-os.mihoyo.com",
-        "dispatchosglobal.yuanshen.com",
-        "osusadispatch.yuanshen.com",
-        "account.mihoyo.com",
-        "log-upload-os.mihoyo.com",
-        "dispatchcntest.yuanshen.com",
-        "devlog-upload.mihoyo.com",
-        "webstatic.mihoyo.com",
-        "log-upload.mihoyo.com",
-        "hk4e-sdk.mihoyo.com",
-        "api-beta-sdk.mihoyo.com",
-        "api-beta-sdk-os.mihoyo.com",
-        "cnbeta01dispatch.yuanshen.com",
-        "dispatchcnglobal.yuanshen.com",
-        "cnbeta02dispatch.yuanshen.com",
-        "sdk-os-static.mihoyo.com",
-        "webstatic-sea.mihoyo.com",
-        "webstatic-sea.hoyoverse.com",
-        "hk4e-sdk-os-static.hoyoverse.com",
-        "sdk-os-static.hoyoverse.com",
-        "api-account-os.hoyoverse.com",
-        "hk4e-sdk-os.hoyoverse.com",
-        "overseauspider.yuanshen.com",
-        "gameapi-account.mihoyo.com",
-        "minor-api.mihoyo.com",
-        "public-data-api.mihoyo.com",
-        "uspider.yuanshen.com",
-        "sdk-static.mihoyo.com",
-        "abtest-api-data-sg.hoyoverse.com",
-        "log-upload-os.hoyoverse.com",
-    ]
+    # Use Grasscutter official server
     HOST = os.getenv("SERVER_ADDRESS", "game.grasscutter.io")
     USE_SSL = os.getenv("USE_SSL", "true").lower() == "true"
     PORT = int(os.getenv("SERVER_PORT", "443"))
@@ -110,7 +76,8 @@ class SRSniffer:
         host = flow.request.pretty_host
         if "overseauspider.yuanshen.com" in flow.request.host:
             self._logger.info("Logging server blocked: {}".format(host))
-            flow.kill()
+            flow.kill() 
+            flow.response = Response.make(404)
             return
         if any([host.endswith(x) for x in self.BLACKLIST]):
             self._logger.info("Redirected: {}".format(host))
