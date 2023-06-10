@@ -18,13 +18,25 @@ Fuck Fiddle Classic, we Linux gang.
 
 See `--help`
 
-## Running
+## Installation
 
 ### Binaries
 
 soon:tm:
 
 ### From source
+
+#### Install from source
+
+You must have Python 3.11+ and git installed on your machine.
+
+```bash
+pip install -U git+https://github.com/teppyboy/crepesr_proxy
+# Run the proxy
+python -m crepesr_proxy
+```
+
+#### Running directly
 
 Assuming you have `poetry` installed:
 
