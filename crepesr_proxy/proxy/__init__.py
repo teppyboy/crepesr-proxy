@@ -308,9 +308,9 @@ class Proxy:
         try:
             match platform.system():
                 case "Linux":
-                    utils.set_system_proxy(self.proxy_host, self.proxy_port)
+                    utils.set_system_proxy(self._proxy_host, self.proxy_port)
                 case "Windows":
-                    utils.set_system_proxy(self.proxy_host, self.proxy_port)
+                    utils.set_system_proxy(self._proxy_host, self.proxy_port)
                 case "Darwin":
                     raise SetSystemProxyError("MacOS is not supported yet.")
         except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
