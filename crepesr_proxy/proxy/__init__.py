@@ -227,9 +227,10 @@ class Proxy:
                 raise NotImplementedError("MacOS is not supported yet.")
 
     def is_certificate_installed(self) -> bool:
+        proxy_host = "127.0.0.1" if self.proxy_host == "0.0.0.0" else self.proxy_host
         proxies = {
-            "http": "http://{}:{}".format(self.proxy_host, self.proxy_port),
-            "https": "http://{}:{}".format(self.proxy_host, self.proxy_port),
+            "http": "http://{}:{}".format(proxy_host, self.proxy_port),
+            "https": "http://{}:{}".format(proxy_host, self.proxy_port),
         }
         try:
             requests.get(
