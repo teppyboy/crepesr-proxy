@@ -76,7 +76,7 @@ class SRSniffer:
         host = flow.request.pretty_host
         if "overseauspider.yuanshen.com" in flow.request.host:
             self._logger.info("Logging server blocked: {}".format(host))
-            flow.kill() 
+            flow.kill()
             flow.response = Response.make(404)
             return
         if any([host.endswith(x) for x in self.BLACKLIST]):
@@ -106,6 +106,9 @@ class Proxy:
         self._proxy_type = proxy_type
         self.proxy_port = 13168
         self.proxy_host = "127.0.0.1"
+        self._proxy_host = (
+            "127.0.0.1" if self.proxy_host == "0.0.0.0" else self.proxy_host
+        )
         self._mitm_options = self._create_mitmproxy_options()
         self._set_logger()
 
@@ -227,10 +230,9 @@ class Proxy:
                 raise NotImplementedError("MacOS is not supported yet.")
 
     def is_certificate_installed(self) -> bool:
-        proxy_host = "127.0.0.1" if self.proxy_host == "0.0.0.0" else self.proxy_host
         proxies = {
-            "http": "http://{}:{}".format(proxy_host, self.proxy_port),
-            "https": "http://{}:{}".format(proxy_host, self.proxy_port),
+            "http": "http://{}:{}".format(self._proxy_host, self.proxy_port),
+            "https": "http://{}:{}".format(self._proxy_host, self.proxy_port),
         }
         try:
             requests.get(
@@ -246,7 +248,7 @@ class Proxy:
         rsp = requests.get(
             "http://mitm.it/cert/pem",
             proxies={
-                "http": "http://{}:{}".format(self.proxy_host, self.proxy_port),
+                "http": "http://{}:{}".format(self._proxy_host, self.proxy_port),
                 "https": "http://{}:{}".format(self.proxy_host, self.proxy_port),
             },
         )
@@ -273,7 +275,7 @@ class Proxy:
         rsp = requests.get(
             "http://mitm.it/cert/cer",
             proxies={
-                "http": "http://{}:{}".format(self.proxy_host, self.proxy_port),
+                "http": "http://{}:{}".format(self._proxy_host, self.proxy_port),
                 "https": "http://{}:{}".format(self.proxy_host, self.proxy_port),
             },
         )
