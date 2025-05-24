@@ -1,6 +1,6 @@
 # CrepeSR-Proxy
 
-This is a proxy server for SR/YS private servers.
+This is a proxy server for connecting to SR/YS private servers, but can also be used for general purposes.
 
 ## Why?
 
@@ -9,6 +9,7 @@ Fuck Fiddle Classic, we Linux gang.
 ## Features
 
 + Automatic mitmproxy configuration & certificate installation.
++ Use without mitmproxy setup (`--no-mitmproxy`), in case you already have v2ray/other proxy servers that can intercept traffic.
 + Automatic set/unset system proxy.
 + Support YS proxy mode by starting with `--ys`
 + Connect to your own private server by setting `SERVER_ADDRESS` env/`--server-address` arg

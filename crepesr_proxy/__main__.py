@@ -22,42 +22,57 @@ def main():
     proxy_manager = Proxy()
     # I'm too lazy to use argparse
     for arg in sys.argv:
-        if arg.startswith("--proxy-ip="):
-            proxy_manager.proxy_host = arg.split("=")[1]
-        elif arg.startswith("--proxy-port="):
-            proxy_manager.set_proxy_port(arg.split("=")[1])
-        elif arg.startswith("--proxy-server="):
-            proxy_manager.proxy_host = arg.split("=")[1].split(":")[0]
-            try:
-                port = arg.split("=")[1].split(":")[1]
-            except IndexError:
-                pass
-            else:
-                proxy_manager.set_proxy_port(port=port)
-        elif arg.startswith("--server-address="):
-            proxy_manager.set_server_address(arg.split("=")[1].split(":")[0])
-            try:
-                port = arg.split("=")[1].split(":")[1]
-            except IndexError:
-                pass
-            else:
-                proxy_manager.set_server_port(port=port)
-        elif arg.startswith("--server-port="):
-            proxy_manager.set_server_port(arg.split("=")[1])
-        elif arg.startswith("--no-set-system-proxy"):
+        if "--no-mitmproxy" not in sys.argv:
+            if arg.startswith("--proxy-ip="):
+                proxy_manager.proxy_host = arg.split("=")[1]
+            elif arg.startswith("--proxy-port="):
+                proxy_manager.set_proxy_port(arg.split("=")[1])
+            elif arg.startswith("--proxy-server="):
+                proxy_manager.proxy_host = arg.split("=")[1].split(":")[0]
+                try:
+                    port = arg.split("=")[1].split(":")[1]
+                except IndexError:
+                    pass
+                else:
+                    proxy_manager.set_proxy_port(port=port)
+            elif arg.startswith("--server-address="):
+                proxy_manager.set_server_address(arg.split("=")[1].split(":")[0])
+                try:
+                    port = arg.split("=")[1].split(":")[1]
+                except IndexError:
+                    pass
+                else:
+                    proxy_manager.set_server_port(port=port)
+            elif arg.startswith("--server-port="):
+                proxy_manager.set_server_port(arg.split("=")[1])
+            elif arg.startswith("--ys") or arg.startswith("--genshin"):
+                proxy_manager.proxy_type = ProxyType.YS
+        else:
+            if arg.startswith("--proxy-ip="):
+                proxy_manager.proxy_host = arg.split("=")[1]
+            elif arg.startswith("--proxy-port="):
+                proxy_manager.proxy_port = int(arg.split("=")[1])
+            elif arg.startswith("--proxy-server="):
+                proxy_manager.proxy_host = arg.split("=")[1].split(":")[0]
+                try:
+                    port = arg.split("=")[1].split(":")[1]
+                except IndexError:
+                    pass
+                else:
+                    proxy_manager.proxy_port = int(port)
+        if arg.startswith("--no-set-system-proxy"):
             sys_proxy_set = False
-        elif arg.startswith("--ys") or arg.startswith("--genshin"):
-            proxy_manager.proxy_type = ProxyType.YS
         elif arg.startswith("--help"):
             print(
                 """Usage: crepesr-proxy [OPTIONS]
 Options:
-    --proxy-ip=IP             Set the proxy IP address.
-    --proxy-port=PORT         Set the proxy port.
-    --proxy-server=SERVER     Set the proxy server (IP:PORT).
+    --proxy-ip=IP             Set the local proxy IP address.
+    --proxy-port=PORT         Set the local proxy port.
+    --proxy-server=SERVER     Set the local proxy server (IP:PORT).
     --server-address=SERVER   Set the server address (IP:PORT (optional)).
     --server-port=PORT        Set the server port.
     --no-set-system-proxy     Do not set the system proxy.
+    --no-mitmproxy            Do not create a mitmproxy instance.
     --ys                      Set the proxy mode to Genshin.
     --genshin                 Alias to --ys.
     --help                    Show this message and exit."""
@@ -66,17 +81,18 @@ Options:
 
     logger.info("Creating new mitmproxy instance...")
     logging.getLogger("mitmproxy").setLevel(logging.ERROR)
-    logger.info("Starting proxy...")
-    proxy_manager.start_proxy()
-    logger.info("Checking for certificate installation...")
-    if not proxy_manager.is_certificate_installed():
-        logger.info("Certificate not installed, installing...")
-        try:
-            proxy_manager.install_certificate()
-        except CertificateInstallError as e:
-            logger.error(e)
-    else:
-        logger.info("Certificate already installed.")
+    if "--no-mitmproxy" not in sys.argv:
+        logger.info("Starting proxy...")
+        proxy_manager.start_proxy()
+        logger.info("Checking for certificate installation...")
+        if not proxy_manager.is_certificate_installed():
+            logger.info("Certificate not installed, installing...")
+            try:
+                proxy_manager.install_certificate()
+            except CertificateInstallError as e:
+                logger.error(e)
+        else:
+            logger.info("Certificate already installed.")
     if sys_proxy_set:
         try:
             logger.info("Setting system proxy...")
@@ -104,8 +120,9 @@ Options:
             proxy_manager.unset_system_proxy()
         except UnsetSystemProxyError as e:
             logger.error(e)
-    logger.info("Stopping proxy...")
-    proxy_manager.stop_proxy()
+    if "--no-mitmproxy" not in sys.argv:
+        logger.info("Stopping proxy...")
+        proxy_manager.stop_proxy()
     logger.info("Proxy stopped.")
 
 

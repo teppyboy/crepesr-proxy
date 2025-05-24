@@ -105,10 +105,7 @@ class Proxy:
         self._loop, self._thread = self._create_loop()
         self._proxy_type = proxy_type
         self.proxy_port = 13168
-        self.proxy_host = "127.0.0.1"
-        self._proxy_host = (
-            "127.0.0.1" if self.proxy_host == "0.0.0.0" else self.proxy_host
-        )
+        self._proxy_host = "127.0.0.1"
         self._mitm_options = self._create_mitmproxy_options()
         self._set_logger()
 
@@ -138,6 +135,14 @@ class Proxy:
     def proxy_type(self):
         return self._proxy_type
 
+    @property
+    def proxy_host(self):
+        return self._proxy_host
+
+    @proxy_host.setter
+    def proxy_host(self, value: str):
+        self._proxy_host = "127.0.0.1" if value == "0.0.0.0" else value
+
     @proxy_type.setter
     def proxy_type(self, value: ProxyType):
         if self._mitm is not None:
@@ -153,7 +158,7 @@ class Proxy:
         Create a new configuration for mitmproxy
         """
         options = Options(
-            listen_host=self.proxy_host,
+            listen_host=self._proxy_host,
             listen_port=self.proxy_port,
             ssl_insecure=True,
             upstream_cert=False,
@@ -249,7 +254,7 @@ class Proxy:
             "http://mitm.it/cert/pem",
             proxies={
                 "http": "http://{}:{}".format(self._proxy_host, self.proxy_port),
-                "https": "http://{}:{}".format(self.proxy_host, self.proxy_port),
+                "https": "http://{}:{}".format(self._proxy_host, self.proxy_port),
             },
         )
         file = NamedTemporaryFile(suffix=".pem")
@@ -276,7 +281,7 @@ class Proxy:
             "http://mitm.it/cert/cer",
             proxies={
                 "http": "http://{}:{}".format(self._proxy_host, self.proxy_port),
-                "https": "http://{}:{}".format(self.proxy_host, self.proxy_port),
+                "https": "http://{}:{}".format(self._proxy_host, self.proxy_port),
             },
         )
         with NamedTemporaryFile(suffix=".p12", delete=False) as file:
@@ -322,7 +327,7 @@ class Proxy:
         try:
             match platform.system():
                 case "Linux":
-                    utils.unset_system_proxy(self.proxy_host, self.proxy_port)
+                    utils.unset_system_proxy(self._proxy_host, self.proxy_port)
                 case "Windows":
                     utils.unset_system_proxy()
                 case "Darwin":
