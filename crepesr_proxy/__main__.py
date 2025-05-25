@@ -19,10 +19,11 @@ logger.addHandler(handler)
 
 def main():
     sys_proxy_set = True
+    no_mitmproxy = "--no-mitmproxy" not in sys.argv
     proxy_manager = Proxy()
     # I'm too lazy to use argparse
     for arg in sys.argv:
-        if "--no-mitmproxy" not in sys.argv:
+        if no_mitmproxy:
             if arg.startswith("--proxy-ip="):
                 proxy_manager.proxy_host = arg.split("=")[1]
             elif arg.startswith("--proxy-port="):
@@ -79,9 +80,9 @@ Options:
             )
             return
 
-    logger.info("Creating new mitmproxy instance...")
-    logging.getLogger("mitmproxy").setLevel(logging.ERROR)
-    if "--no-mitmproxy" not in sys.argv:
+    if not no_mitmproxy:
+        logger.info("Creating new mitmproxy instance...")
+        logging.getLogger("mitmproxy").setLevel(logging.ERROR)
         logger.info("Starting proxy...")
         proxy_manager.start_proxy()
         logger.info("Checking for certificate installation...")
@@ -120,7 +121,7 @@ Options:
             proxy_manager.unset_system_proxy()
         except UnsetSystemProxyError as e:
             logger.error(e)
-    if "--no-mitmproxy" not in sys.argv:
+    if not no_mitmproxy:
         logger.info("Stopping proxy...")
         proxy_manager.stop_proxy()
     logger.info("Proxy stopped.")
