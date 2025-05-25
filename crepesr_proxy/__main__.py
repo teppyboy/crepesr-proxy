@@ -19,11 +19,11 @@ logger.addHandler(handler)
 
 def main():
     sys_proxy_set = True
-    no_mitmproxy = "--no-mitmproxy" not in sys.argv
+    no_mitmproxy = "--no-mitmproxy" in sys.argv
     proxy_manager = Proxy()
     # I'm too lazy to use argparse
     for arg in sys.argv:
-        if no_mitmproxy:
+        if not no_mitmproxy:
             if arg.startswith("--proxy-ip="):
                 proxy_manager.proxy_host = arg.split("=")[1]
             elif arg.startswith("--proxy-port="):
